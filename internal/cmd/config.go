@@ -111,12 +111,10 @@ func resolveFeatureFlags(gs *state.GlobalState, cmd *cobra.Command, cliConfig Co
 	cli := features.SurfaceInput{Values: cliConfig.Features, Supplied: cliSupplied}
 
 	// The JSON config surface is read directly from disk so an explicit
-	// "features" key can win over lower-priority surfaces. A missing config
-	// file is not an error here; the surface is simply not supplied.
-	var jsonSurface features.SurfaceInput
-	if fileConf, derr := readDiskConfig(gs); derr == nil && len(fileConf.Features) > 0 {
-		jsonSurface = features.SurfaceInput{Values: fileConf.Features, Supplied: true}
-	}
+	// "features" key wins over lower-priority surfaces. Presence of the key is
+	// what marks the surface supplied, so an explicit empty array clears
+	// inherited activation. A missing config file is not an error here.
+	jsonSurface := readJSONFeatureSurface(gs)
 
 	reg, err := features.Init(gs.Logger, cli, jsonSurface, gs.Env)
 	if err != nil {
@@ -128,6 +126,31 @@ func resolveFeatureFlags(gs *state.GlobalState, cmd *cobra.Command, cliConfig Co
 	}
 
 	return reg, nil
+}
+
+// readJSONFeatureSurface reads the on-disk JSON config and reports the feature
+// flag surface. The surface is supplied if and only if the config object
+// contains a "features" key, regardless of whether its value is empty, so an
+// explicit `"features": []` can clear activation inherited from env or aliases.
+func readJSONFeatureSurface(gs *state.GlobalState) features.SurfaceInput {
+	if _, err := gs.FS.Stat(gs.Flags.ConfigFilePath); err != nil {
+		return features.SurfaceInput{}
+	}
+	data, err := fsext.ReadFile(gs.FS, gs.Flags.ConfigFilePath)
+	if err != nil {
+		return features.SurfaceInput{}
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return features.SurfaceInput{}
+	}
+	rawFeatures, ok := raw["features"]
+	if !ok {
+		return features.SurfaceInput{}
+	}
+	var values []string
+	_ = json.Unmarshal(rawFeatures, &values)
+	return features.SurfaceInput{Values: values, Supplied: true}
 }
 
 // getPartialConfig returns a Config but only parses the Options inside.

@@ -13,9 +13,59 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/guregu/null.v3"
 
+	"go.k6.io/k6/v2/internal/features"
 	"go.k6.io/k6/v2/internal/output/prometheusrw/remote"
 	"go.k6.io/k6/v2/lib/types"
 )
+
+func TestConfigUseNativeHistograms(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		config Config
+		flags  *features.Flags
+		want   bool
+	}{
+		{
+			name:   "neither set",
+			config: Config{},
+			flags:  &features.Flags{},
+			want:   false,
+		},
+		{
+			name:   "feature flag set",
+			config: Config{},
+			flags:  &features.Flags{NativeHistograms: true},
+			want:   true,
+		},
+		{
+			name:   "legacy config set",
+			config: Config{TrendAsNativeHistogram: null.BoolFrom(true)},
+			flags:  &features.Flags{},
+			want:   true,
+		},
+		{
+			name:   "nil flags falls back to legacy config",
+			config: Config{TrendAsNativeHistogram: null.BoolFrom(true)},
+			flags:  nil,
+			want:   true,
+		},
+		{
+			name:   "nil flags and no legacy config",
+			config: Config{},
+			flags:  nil,
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, tt.config.UseNativeHistograms(tt.flags))
+		})
+	}
+}
 
 func TestConfigApply(t *testing.T) {
 	t.Parallel()

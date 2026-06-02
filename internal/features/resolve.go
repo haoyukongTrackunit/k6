@@ -1,7 +1,6 @@
 package features
 
 import (
-	"reflect"
 	"sort"
 	"strings"
 
@@ -118,19 +117,16 @@ func parseValues(vals []string) []string {
 }
 
 func (r *Registry) setFields(names map[string]struct{}) {
-	v := reflect.ValueOf(r.flags).Elem()
 	for name := range names {
 		idx := r.byName[name]
-		field := v.FieldByName(r.metadata[idx].Field)
-		field.SetBool(true)
+		r.target.FieldByName(r.metadata[idx].Field).SetBool(true)
 	}
 }
 
 func (r *Registry) forceGA() {
-	v := reflect.ValueOf(r.flags).Elem()
 	for _, meta := range r.metadata {
 		if meta.Lifecycle == GA {
-			v.FieldByName(meta.Field).SetBool(true)
+			r.target.FieldByName(meta.Field).SetBool(true)
 		}
 	}
 }

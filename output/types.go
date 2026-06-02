@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"go.k6.io/k6/v2/internal/features"
 	"go.k6.io/k6/v2/internal/usage"
 	"go.k6.io/k6/v2/lib"
 	"go.k6.io/k6/v2/lib/fsext"
@@ -32,6 +33,7 @@ type Params struct {
 	RuntimeOptions lib.RuntimeOptions
 	ExecutionPlan  []lib.ExecutionStep
 	Usage          *usage.Usage
+	FeatureFlags   *features.Flags
 }
 
 // TODO: make v2 with buffered channels?

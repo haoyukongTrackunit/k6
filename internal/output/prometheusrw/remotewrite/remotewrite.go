@@ -24,6 +24,7 @@ type Output struct {
 	output.SampleBuffer
 
 	config             Config
+	trendAsNativeHist  bool
 	logger             logrus.FieldLogger
 	now                func() time.Time
 	periodicFlusher    *output.PeriodicFlusher
@@ -54,8 +55,9 @@ func New(params output.Params) (*Output, error) {
 	}
 
 	o := &Output{
-		client: wc,
-		config: config,
+		client:            wc,
+		config:            config,
+		trendAsNativeHist: config.UseNativeHistograms(params.FeatureFlags),
 		// TODO: consider to do this function millisecond-based
 		// so we don't need to truncate all the time we invoke it.
 		// Before we should analyze if in some cases is it useful to have it in ns.
@@ -254,7 +256,7 @@ func (o *Output) convertToPbSeries(samplesContainers []metrics.SampleContainer) 
 			swm, ok := o.tsdb[sample.TimeSeries]
 			if !ok {
 				// TODO: encapsulate the trend arguments into a Trend Mapping factory
-				swm = newSeriesWithMeasure(sample.TimeSeries, o.config.TrendAsNativeHistogram.Bool, o.trendStatsResolver)
+				swm = newSeriesWithMeasure(sample.TimeSeries, o.trendAsNativeHist, o.trendStatsResolver)
 				swm.Latest = truncTime
 				o.tsdb[sample.TimeSeries] = swm
 				seen[sample.TimeSeries] = struct{}{}

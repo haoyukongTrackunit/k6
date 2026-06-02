@@ -8,6 +8,7 @@ import (
 
 	"go.k6.io/k6/v2/cmd/state"
 	"go.k6.io/k6/v2/ext"
+	"go.k6.io/k6/v2/internal/features"
 	"go.k6.io/k6/v2/internal/output/cloud"
 	"go.k6.io/k6/v2/internal/output/csv"
 	"go.k6.io/k6/v2/internal/output/influxdb"
@@ -115,6 +116,10 @@ func createOutputs(
 	if err != nil {
 		return nil, err
 	}
+	var featureFlags *features.Flags
+	if test.preInitState.FeatureFlags != nil {
+		featureFlags = test.preInitState.FeatureFlags.Flags()
+	}
 	baseParams := output.Params{
 		ScriptPath:     test.source.URL,
 		Logger:         gs.Logger,
@@ -126,6 +131,7 @@ func createOutputs(
 		RuntimeOptions: test.preInitState.RuntimeOptions,
 		ExecutionPlan:  executionPlan,
 		Usage:          test.preInitState.Usage,
+		FeatureFlags:   featureFlags,
 	}
 
 	outputs := test.derivedConfig.Out

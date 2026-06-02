@@ -2,6 +2,7 @@ package remotewrite
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
 	"testing"
@@ -11,8 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.k6.io/k6/v2/internal/features"
+	"go.k6.io/k6/v2/internal/lib/testutils"
 	"go.k6.io/k6/v2/lib/types"
 	"go.k6.io/k6/v2/metrics"
+	"go.k6.io/k6/v2/output"
 	"gopkg.in/guregu/null.v3"
 )
 
@@ -299,6 +303,45 @@ func TestNewSeriesWithNativeHistogramMeasure(t *testing.T) {
 	nhs, ok := swm.Measure.(*nativeHistogramSink)
 	require.True(t, ok)
 	assert.NotNil(t, nhs.H)
+}
+
+func TestNewOutputUsesNativeHistogramFeatureFlag(t *testing.T) {
+	t.Parallel()
+
+	jsonConfig := json.RawMessage(`{"url":"http://remote-url.fake"}`)
+
+	t.Run("feature flag enables native histograms", func(t *testing.T) {
+		t.Parallel()
+		o, err := New(output.Params{
+			Logger:       testutils.NewLogger(t),
+			JSONConfig:   jsonConfig,
+			FeatureFlags: &features.Flags{NativeHistograms: true},
+		})
+		require.NoError(t, err)
+		assert.True(t, o.trendAsNativeHist)
+	})
+
+	t.Run("no flag and no legacy config keeps it off", func(t *testing.T) {
+		t.Parallel()
+		o, err := New(output.Params{
+			Logger:       testutils.NewLogger(t),
+			JSONConfig:   jsonConfig,
+			FeatureFlags: &features.Flags{},
+		})
+		require.NoError(t, err)
+		assert.False(t, o.trendAsNativeHist)
+	})
+
+	t.Run("legacy config still works without the flag", func(t *testing.T) {
+		t.Parallel()
+		o, err := New(output.Params{
+			Logger:       testutils.NewLogger(t),
+			JSONConfig:   json.RawMessage(`{"url":"http://remote-url.fake","trendAsNativeHistogram":true}`),
+			FeatureFlags: &features.Flags{},
+		})
+		require.NoError(t, err)
+		assert.True(t, o.trendAsNativeHist)
+	})
 }
 
 func TestOutputSetTrendStatsResolver(t *testing.T) {

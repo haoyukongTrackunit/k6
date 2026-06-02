@@ -36,12 +36,22 @@ func parseLifecycle(s string) (Lifecycle, bool) {
 	}
 }
 
-// Bootstrap reflects over Flags and builds a Registry with validated metadata.
-func Bootstrap(flags *Flags) (*Registry, error) {
-	t := reflect.TypeFor[Flags]()
+// Bootstrap reflects over a pointer to a flags struct and builds a Registry
+// with validated metadata. Production code passes the package Flags singleton;
+// tests may pass any pointer-to-struct whose bool fields carry the lifecycle,
+// help, and optional name tags, which keeps resolution testable in isolation.
+func Bootstrap(flags any) (*Registry, error) {
+	rv := reflect.ValueOf(flags)
+	if rv.Kind() != reflect.Pointer || rv.IsNil() || rv.Elem().Kind() != reflect.Struct {
+		return nil, fmt.Errorf("features: Bootstrap requires a non-nil pointer to a struct, got %T", flags)
+	}
+
+	target := rv.Elem()
+	t := target.Type()
 
 	reg := &Registry{
-		flags:  flags,
+		raw:    flags,
+		target: target,
 		byName: make(map[string]int),
 	}
 

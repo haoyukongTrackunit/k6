@@ -2,6 +2,7 @@
 package features
 
 import (
+	"reflect"
 	"sort"
 	"strings"
 
@@ -64,7 +65,8 @@ type Flag struct {
 
 // Registry holds the flag state plus metadata built by Bootstrap.
 type Registry struct {
-	flags     *Flags
+	raw       any           // original pointer-to-struct passed to Bootstrap
+	target    reflect.Value // settable struct value, used for field writes
 	metadata  []Flag
 	byName    map[string]int // canonical name -> metadata index
 	activated []string       // canonical names after resolution
@@ -119,9 +121,12 @@ func (r *Registry) TagsForActivation() map[string]string {
 	return tags
 }
 
-// Flags returns the underlying Flags struct for direct field reads.
+// Flags returns the underlying Flags singleton for direct field reads. It
+// returns nil if the registry was bootstrapped from a non-Flags struct, which
+// only happens in tests that supply their own struct and read it directly.
 func (r *Registry) Flags() *Flags {
-	return r.flags
+	flags, _ := r.raw.(*Flags)
+	return flags
 }
 
 // Global is the process-wide feature flags instance.
