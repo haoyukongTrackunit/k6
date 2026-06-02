@@ -48,7 +48,7 @@
 ## 7. Hot-path & maintainability guarantees
 
 - [x] 7.1 Ensure gated engine branches are direct field reads (no map lookup/alloc/lock); verify via review and optional `go build -gcflags=-m`
-- [ ] 7.2 Add optional regression-detection micro-benchmark (no absolute-ns CI gate)
+- [x] 7.2 Add optional regression-detection micro-benchmark (no absolute-ns CI gate) — `BenchmarkResolve` + `BenchmarkGatedFieldRead` (0 allocs/op on the gated read)
 - [x] 7.2a Verify resolution/bootstrap cost is paid once at startup and does not noticeably impact CLI startup time
 - [x] 7.3 Verify registry removal of an identifier fails the build at every gated site (forcing function — typed field reads are compile-checked)
 - [x] 7.4 Add test demonstrating add → promote (`Experimental`→`GA`) → retire lifecycle end-to-end
