@@ -204,6 +204,7 @@ func (b *Bundle) populateExports(updateOptions bool, bi *BundleInstance) error {
 					err = fmt.Errorf("error parsing script options: %w", err)
 					return
 				}
+				b.warnUnsupportedOptionsFeatures(data)
 				dec := json.NewDecoder(bytes.NewReader(data))
 				dec.DisallowUnknownFields()
 				if err = dec.Decode(&b.Options); err != nil {
@@ -238,6 +239,23 @@ func (b *Bundle) populateExports(updateOptions bool, bi *BundleInstance) error {
 	}
 
 	return nil
+}
+
+// warnUnsupportedOptionsFeatures emits a warning if the script options block
+// carries a "features" key. Feature flags are not configurable from the script;
+// the key is ignored and the user is pointed at the supported surfaces.
+func (b *Bundle) warnUnsupportedOptionsFeatures(data []byte) {
+	var optionKeys map[string]json.RawMessage
+	if json.Unmarshal(data, &optionKeys) != nil {
+		return
+	}
+	if _, hasFeatures := optionKeys["features"]; !hasFeatures {
+		return
+	}
+	b.preInitState.Logger.WithField("source", "options").Warn(
+		"Feature flags cannot be set from the script options block; " +
+			"use --features, K6_FEATURES, or the JSON config instead. Ignoring options.features.",
+	)
 }
 
 func beautifyOptionsJSONUnmarshalError(data []byte, err error) error {

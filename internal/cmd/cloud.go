@@ -120,6 +120,18 @@ func (c *cmdCloud) run(cmd *cobra.Command, args []string) error {
 	modifyAndPrintBar(c.gs, progressBar, pb.WithConstProgress(0, "Building the archive..."))
 	arc := test.makeArchive()
 
+	// Convey the locally-resolved feature flag activation set to distributed
+	// workers through the existing env-var passthrough bag. The orchestrator
+	// forwards K6_FEATURES verbatim; workers resolve it identically to local.
+	if ff := test.preInitState.FeatureFlags; ff != nil {
+		if active := ff.ActivationSet(); len(active) > 0 {
+			if arc.Env == nil {
+				arc.Env = make(map[string]string)
+			}
+			arc.Env["K6_FEATURES"] = strings.Join(active, ",")
+		}
+	}
+
 	tmpCloudConfig, err := cloudapi.GetTemporaryCloudConfig(arc.Options.Cloud)
 	if err != nil {
 		return err
