@@ -110,6 +110,52 @@ func TestBootstrap(t *testing.T) {
 	}
 }
 
+func TestBootstrapRejectsInvalidDefinitions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		flags any
+	}{
+		{
+			name: "invalid name override",
+			flags: &struct {
+				Foo bool `lifecycle:"experimental" help:"x" name:"Bad-Name"`
+			}{},
+		},
+		{
+			name: "missing lifecycle tag",
+			flags: &struct {
+				Foo bool `help:"x"`
+			}{},
+		},
+		{
+			name: "invalid lifecycle value",
+			flags: &struct {
+				Foo bool `lifecycle:"beta" help:"x"`
+			}{},
+		},
+		{
+			name: "empty help tag",
+			flags: &struct {
+				Foo bool `lifecycle:"experimental"`
+			}{},
+		},
+		{
+			name:  "not a pointer to struct",
+			flags: struct{}{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := features.Bootstrap(tt.flags)
+			assert.Error(t, err)
+		})
+	}
+}
+
 func TestParseInput(t *testing.T) {
 	t.Parallel()
 
