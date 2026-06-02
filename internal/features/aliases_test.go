@@ -64,7 +64,7 @@ func TestRegistryResolveEnvAliasesHonoredTruthy(t *testing.T) {
 func TestRegistryResolveEnvAliasesHonoredFalsy(t *testing.T) {
 	t.Parallel()
 
-	for _, value := range []string{"false", "0"} {
+	for _, value := range []string{"false", "0", "banana", ""} {
 		t.Run("value="+value, func(t *testing.T) {
 			t.Parallel()
 
@@ -76,7 +76,7 @@ func TestRegistryResolveEnvAliasesHonoredFalsy(t *testing.T) {
 
 			assert.Empty(t, names)
 			assert.False(t, supplied)
-			assert.Empty(t, hook.AllEntries())
+			assert.Empty(t, hook.AllEntries(), "non-truthy alias value must be ignored with no log")
 
 			logger, hook = logtest.NewNullLogger()
 			surface := reg.ResolveEnvSurface("", false, env, logger)

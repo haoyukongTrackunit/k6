@@ -60,15 +60,9 @@ func (r *Registry) ResolveEnvAliases(
 
 		switch a.Phase {
 		case Honored:
-			b, err := strconv.ParseBool(val)
-			if err != nil {
-				logger.WithFields(logrus.Fields{
-					"env":   a.EnvVar,
-					"value": val,
-				}).Warn("Could not parse alias env var as bool, ignoring")
-				continue
-			}
-			if !b {
+			// strconv.ParseBool semantics: truthy activates; everything else
+			// (falsy or unparseable) is ignored with no log, per spec.
+			if b, err := strconv.ParseBool(val); err != nil || !b {
 				continue
 			}
 			logger.WithFields(logrus.Fields{
