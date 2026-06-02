@@ -13,6 +13,7 @@ import (
 	"github.com/mstoykov/envconfig"
 	"gopkg.in/guregu/null.v3"
 
+	"go.k6.io/k6/v2/internal/features"
 	"go.k6.io/k6/v2/internal/output/prometheusrw/remote"
 	"go.k6.io/k6/v2/internal/output/prometheusrw/sigv4"
 	"go.k6.io/k6/v2/lib/types"
@@ -65,8 +66,10 @@ type Config struct {
 	// before push a new set of time series to the endpoint.
 	PushInterval types.NullDuration `json:"pushInterval" envconfig:"K6_PROMETHEUS_RW_PUSH_INTERVAL"`
 
-	// TrendAsNativeHistogram defines if the mapping for metrics defined as Trend type
-	// should map to a Prometheus' Native Histogram.
+	// TrendAsNativeHistogram enables native histograms for trend metrics.
+	// MIGRATION: This will be replaced by the native-histograms feature flag.
+	// Legacy env var K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM is registered
+	// as a Phase-1 honored alias for the native-histograms flag.
 	TrendAsNativeHistogram null.Bool `json:"trendAsNativeHistogram" envconfig:"K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM"`
 
 	// TrendStats defines the stats to flush for Trend metrics.
@@ -384,6 +387,15 @@ func parseArg(text string) (Config, error) {
 	}
 
 	return c, nil
+}
+
+// UseNativeHistograms checks whether native histograms should be used,
+// consulting the feature flag first, then falling back to the legacy config.
+func (conf Config) UseNativeHistograms(featureFlags *features.Flags) bool {
+	if featureFlags != nil && featureFlags.NativeHistograms {
+		return true
+	}
+	return conf.TrendAsNativeHistogram.Bool
 }
 
 func isSigV4PartiallyConfigured(region, accessKey, secretKey null.String) bool {

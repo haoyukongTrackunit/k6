@@ -35,6 +35,7 @@ func configFlagSet() *pflag.FlagSet {
 		false,
 		"don't send anonymous usage"+"stats (https://grafana.com/docs/k6/latest/set-up/usage-collection/)",
 	)
+	flags.StringArray("features", nil, "enable feature flags (comma-separated)")
 	return flags
 }
 
@@ -43,6 +44,7 @@ type Config struct {
 	lib.Options
 
 	Out           []string  `json:"out" envconfig:"K6_OUT"`
+	Features      []string  `json:"features" envconfig:"K6_FEATURES"`
 	Linger        null.Bool `json:"linger" envconfig:"K6_LINGER"`
 	NoUsageReport null.Bool `json:"noUsageReport" envconfig:"K6_NO_USAGE_REPORT"`
 	WebDashboard  null.Bool `json:"webDashboard" envconfig:"K6_WEB_DASHBOARD"`
@@ -72,6 +74,9 @@ func (c Config) Apply(cfg Config) Config {
 	c.Options = c.Options.Apply(cfg.Options)
 	if len(cfg.Out) > 0 {
 		c.Out = cfg.Out
+	}
+	if len(cfg.Features) > 0 {
+		c.Features = cfg.Features
 	}
 	if cfg.Linger.Valid {
 		c.Linger = cfg.Linger
@@ -111,9 +116,14 @@ func getConfig(flags *pflag.FlagSet) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	feats, err := flags.GetStringArray("features")
+	if err != nil {
+		return Config{}, err
+	}
 	return Config{
 		Options:       opts,
 		Out:           out,
+		Features:      feats,
 		Linger:        getNullBool(flags, "linger"),
 		NoUsageReport: getNullBool(flags, "no-usage-report"),
 

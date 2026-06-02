@@ -24,6 +24,7 @@ import (
 	"go.k6.io/k6/v2/internal/event"
 	"go.k6.io/k6/v2/internal/execution"
 	"go.k6.io/k6/v2/internal/execution/local"
+	"go.k6.io/k6/v2/internal/features"
 	"go.k6.io/k6/v2/internal/lib/summary"
 	"go.k6.io/k6/v2/internal/lib/trace"
 	"go.k6.io/k6/v2/internal/metrics/engine"
@@ -69,6 +70,20 @@ func (c *cmdRun) run(cmd *cobra.Command, args []string) (err error) {
 			logger.WithError(err).Debug("Everything has finished, exiting k6 with an error!")
 		}
 	}()
+
+	// Resolve feature flags
+	var cliFeatures []string
+	if cmd.Flags().Changed("features") {
+		cliFeatures, _ = cmd.Flags().GetStringArray("features")
+	}
+	featuresRegistry, err := features.Init(logger, cliFeatures, c.gs.Env)
+	if err != nil {
+		return fmt.Errorf("initializing feature flags: %w", err)
+	}
+	for _, name := range featuresRegistry.ActivationSet() {
+		_ = c.gs.Usage.Strings("features", name)
+	}
+	_ = featuresRegistry // TODO: wire into engine
 
 	globalCtx, globalCancel := context.WithCancel(c.gs.Ctx)
 	defer globalCancel()
