@@ -124,6 +124,35 @@ func TestRegistryResolveUnknownName(t *testing.T) {
 	}
 }
 
+func TestRegistryResolveInvalidNameIsUnknown(t *testing.T) {
+	t.Parallel()
+
+	// Non-kebab user input must be treated as Unknown (outcome "unknown"),
+	// not a distinct "invalid" outcome.
+	for _, name := range []string{"Native-Histograms", "foo_bar", "foo--bar"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			reg := newRegistry(t)
+			logger, hook := logtest.NewNullLogger()
+
+			activated := reg.Resolve(
+				features.SurfaceInput{Values: []string{name}, Supplied: true},
+				features.SurfaceInput{},
+				features.SurfaceInput{},
+				logger,
+			)
+
+			assert.Empty(t, activated)
+
+			entry := assertSingleLogEntry(t, hook, logrus.ErrorLevel)
+			assert.Equal(t, name, entry.Data["feature"])
+			assert.Equal(t, "unknown", entry.Data["outcome"])
+			assert.Equal(t, "cli", entry.Data["source"])
+		})
+	}
+}
+
 func TestRegistryResolveRecognizedExperimental(t *testing.T) {
 	t.Parallel()
 

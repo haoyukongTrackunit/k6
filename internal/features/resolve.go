@@ -49,15 +49,9 @@ func (r *Registry) Resolve(cli, env, json SurfaceInput, logger logrus.FieldLogge
 	activated := make(map[string]struct{})
 
 	for _, name := range names {
-		if !kebabRe.MatchString(name) {
-			logger.WithFields(logrus.Fields{
-				"feature": name,
-				"outcome": "invalid",
-				"source":  source,
-			}).Error("Feature flag name is not valid kebab-case")
-			continue
-		}
-
+		// A non-conforming runtime name is treated as Unknown (spec): the
+		// registry only holds validated kebab-case names, so an invalid input
+		// can never match and falls through to the Unknown path below.
 		idx, known := r.byName[name]
 		if !known {
 			logger.WithFields(logrus.Fields{
