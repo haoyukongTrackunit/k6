@@ -61,6 +61,6 @@
 
 ## 9. Docs & rollout
 
-- [ ] 9.1 Document `k6 features`, `--features`/`K6_FEATURES`/JSON surfaces, lifecycle, and migration in user docs (separate docs repo)
-- [ ] 9.2 Close and redirect GitHub proposal #4869 (maintainer action on merge)
+- [x] 9.1 Document `k6 features`, `--features`/`K6_FEATURES`/JSON surfaces, lifecycle, and migration in user docs — draft PR grafana/k6-docs#2259 (`using-k6/feature-flags.md`)
+- [x] 9.2 Close and redirect GitHub proposal #4869 — already CLOSED, superseded by epic #5943
 - [x] 9.3 Run `make check` (lint + race tests) and `openspec validate add-feature-flags --strict` — full-repo lint clean, race tests pass on all touched packages, spec structurally validated (24 requirements, all with scenarios)
