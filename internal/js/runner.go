@@ -576,6 +576,9 @@ func (r *Runner) SetOptions(opts lib.Options) error {
 
 	// FIXME: add tests
 	r.RunTags = r.preInitState.Registry.RootTagSet().WithTagsFromMap(r.Bundle.Options.RunTags)
+	if ff := r.preInitState.FeatureFlags; ff != nil {
+		r.RunTags = r.RunTags.WithTagsFromMap(ff.TagsForActivation())
+	}
 
 	return nil
 }

@@ -534,6 +534,13 @@ func (lt *loadedTest) consolidateDeriveAndValidateConfig(
 		return nil, err
 	}
 
+	gs.Logger.Debug("Resolving feature flags...")
+	featureFlags, err := resolveFeatureFlags(gs, cmd, cliConfig)
+	if err != nil {
+		return nil, err
+	}
+	lt.preInitState.FeatureFlags = featureFlags
+
 	gs.Logger.Debug("Parsing thresholds and validating config...")
 	// Parse the thresholds, only if the --no-threshold flag is not set.
 	// If parsing the threshold expressions failed, consider it as an
@@ -603,11 +610,16 @@ func (lct *loadedAndConfiguredTest) buildTestRunState(
 	// This is done async to avoid blocking the rest of the loading process as it will not stop if it fails.
 	go loadSystemCertPool(lct.preInitState.Logger)
 
+	runTags := lct.preInitState.Registry.RootTagSet().WithTagsFromMap(configToReinject.RunTags)
+	if ff := lct.preInitState.FeatureFlags; ff != nil {
+		runTags = runTags.WithTagsFromMap(ff.TagsForActivation())
+	}
+
 	return &lib.TestRunState{
 		TestPreInitState: lct.preInitState,
 		Runner:           lct.initRunner,
 		Options:          lct.derivedConfig.Options, // we will always run with the derived options
-		RunTags:          lct.preInitState.Registry.RootTagSet().WithTagsFromMap(configToReinject.RunTags),
+		RunTags:          runTags,
 		GroupSummary:     lib.NewGroupSummary(lct.preInitState.Logger),
 	}, nil
 }

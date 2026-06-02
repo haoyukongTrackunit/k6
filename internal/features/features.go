@@ -127,8 +127,11 @@ func (r *Registry) Flags() *Flags {
 // Global is the process-wide feature flags instance.
 var Global = &Flags{} //nolint:gochecknoglobals
 
-// Init bootstraps and resolves features from the environment.
-func Init(logger logrus.FieldLogger, cliFeatures []string, env map[string]string) (*Registry, error) {
+// Init bootstraps the registry, registers the default aliases, and resolves the
+// activation set from the three configuration surfaces. The env map carries
+// K6_FEATURES plus any legacy alias env vars; the env surface is built from it
+// internally. It returns the resolved registry, ready for field reads and tags.
+func Init(logger logrus.FieldLogger, cli, json SurfaceInput, env map[string]string) (*Registry, error) {
 	reg, err := Bootstrap(Global)
 	if err != nil {
 		return nil, err
@@ -140,14 +143,9 @@ func Init(logger logrus.FieldLogger, cliFeatures []string, env map[string]string
 		}
 	}
 
-	cliSupplied := cliFeatures != nil
-	cli := SurfaceInput{Values: cliFeatures, Supplied: cliSupplied}
-
 	k6f, k6fSet := env["K6_FEATURES"]
 	envSurface := reg.ResolveEnvSurface(k6f, k6fSet, env, logger)
 
-	jsonSurface := SurfaceInput{}
-
-	reg.Resolve(cli, envSurface, jsonSurface, logger)
+	reg.Resolve(cli, envSurface, json, logger)
 	return reg, nil
 }

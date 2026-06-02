@@ -11,12 +11,14 @@ import (
 
 	"github.com/mstoykov/envconfig"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/guregu/null.v3"
 
 	"go.k6.io/k6/v2/cmd/state"
 	"go.k6.io/k6/v2/errext"
 	"go.k6.io/k6/v2/errext/exitcodes"
+	"go.k6.io/k6/v2/internal/features"
 	"go.k6.io/k6/v2/lib"
 	"go.k6.io/k6/v2/lib/executor"
 	"go.k6.io/k6/v2/lib/fsext"
@@ -94,6 +96,38 @@ func (c Config) Apply(cfg Config) Config {
 		c.Collectors = cfg.Collectors
 	}
 	return c
+}
+
+// resolveFeatureFlags resolves the feature flag activation set from the three
+// configuration surfaces (CLI, env, JSON config) using winner-takes-all
+// precedence, bootstraps the registry, and reports the activation set to usage
+// telemetry. The resolved registry is stored on the test's pre-init state so
+// the engine and outputs can read flag fields and emit metric tags.
+func resolveFeatureFlags(gs *state.GlobalState, cmd *cobra.Command, cliConfig Config) (*features.Registry, error) {
+	cliSupplied := false
+	if cmd.Flags().Lookup("features") != nil {
+		cliSupplied = cmd.Flags().Changed("features")
+	}
+	cli := features.SurfaceInput{Values: cliConfig.Features, Supplied: cliSupplied}
+
+	// The JSON config surface is read directly from disk so an explicit
+	// "features" key can win over lower-priority surfaces. A missing config
+	// file is not an error here; the surface is simply not supplied.
+	var jsonSurface features.SurfaceInput
+	if fileConf, derr := readDiskConfig(gs); derr == nil && len(fileConf.Features) > 0 {
+		jsonSurface = features.SurfaceInput{Values: fileConf.Features, Supplied: true}
+	}
+
+	reg, err := features.Init(gs.Logger, cli, jsonSurface, gs.Env)
+	if err != nil {
+		return nil, fmt.Errorf("initializing feature flags: %w", err)
+	}
+
+	for _, name := range reg.ActivationSet() {
+		_ = gs.Usage.Strings("features", name)
+	}
+
+	return reg, nil
 }
 
 // getPartialConfig returns a Config but only parses the Options inside.

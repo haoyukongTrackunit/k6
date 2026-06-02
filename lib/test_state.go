@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"go.k6.io/k6/v2/internal/event"
+	"go.k6.io/k6/v2/internal/features"
 	"go.k6.io/k6/v2/internal/lib/trace"
 	"go.k6.io/k6/v2/internal/usage"
 	"go.k6.io/k6/v2/metrics"
@@ -27,6 +28,9 @@ type TestPreInitState struct {
 	TracerProvider *trace.TracerProvider
 	Usage          *usage.Usage
 	SecretsManager *secretsource.Manager
+
+	// FeatureFlags holds the resolved feature flag registry for the run.
+	FeatureFlags *features.Registry
 
 	// FIXME (@oleiade): is this the way?
 	TestStatus *TestStatus
